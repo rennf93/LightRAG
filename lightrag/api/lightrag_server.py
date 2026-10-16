@@ -1826,6 +1826,17 @@ def create_app(args):
     if body_limits is not None:
         app.add_middleware(BodyLimitMiddleware, api_prefix=api_prefix, **body_limits)
 
+    # Opt-in inbound guard (fastapi-guard): per-IP rate limit, IP policy and
+    # path/query/header attack screening. Off by default, in which case the
+    # package is not imported. Added AFTER the body-limit middleware (so it runs
+    # outside it, before any body is read) and BEFORE CORS, for the same reason
+    # as above: its 403 / 429 responses must carry CORS headers. The pre-existing
+    # /login limiter is independent and unchanged; see env.example.
+    if getattr(args, "guard_enabled", False):
+        from lightrag.api.security_guard import install_guard
+
+        install_guard(app, args, api_prefix)
+
     # Add CORS middleware
     cors_origins = get_cors_origins()
     # Per the Fetch spec, the wildcard origin "*" and credentialed requests are

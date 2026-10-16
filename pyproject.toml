@@ -105,6 +105,7 @@ api = [
     "async-timeout>=4.0.3; python_version < '3.11'",
     "distro",
     "fastapi>=0.108",  # 0.108 adds FastAPI.__call__ scope["root_path"] override; api_prefix relies on it
+    "fastapi-guard>=8.1.1,<9",  # opt-in inbound guard (LIGHTRAG_GUARD_ENABLED); imported lazily
     "httpcore",
     "httpx>=0.28.1",
     "jiter",

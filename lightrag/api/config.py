@@ -9,6 +9,7 @@ import logging
 from dotenv import load_dotenv
 from lightrag import ROLES
 from lightrag.utils import get_env_value, logger
+from lightrag.api.security_guard import DEFAULT_EXCLUDE_PATHS
 from lightrag.llm.binding_options import (
     BedrockLLMOptions,
     GeminiEmbeddingOptions,
@@ -889,6 +890,32 @@ def parse_args() -> argparse.Namespace:
     args.login_max_failed_attempts = get_env_value("LOGIN_MAX_FAILED_ATTEMPTS", 5, int)
     args.login_lockout_window_seconds = get_env_value(
         "LOGIN_LOCKOUT_WINDOW_SECONDS", 300, float
+    )
+
+    # Opt-in inbound request guard (fastapi-guard): HTTP-wide per-IP rate limit,
+    # IP allow/deny lists and path/query/header attack screening. Off by default;
+    # when off the package is never imported. Request bodies are not scanned
+    # unless LIGHTRAG_GUARD_SCAN_BODY is true.
+    args.guard_enabled = get_env_value("LIGHTRAG_GUARD_ENABLED", False, bool)
+    args.guard_rate_limit = get_env_value("LIGHTRAG_GUARD_RATE_LIMIT", 600, int)
+    args.guard_rate_limit_window = get_env_value(
+        "LIGHTRAG_GUARD_RATE_LIMIT_WINDOW", 60, int
+    )
+    args.guard_trusted_proxies = get_env_value(
+        "LIGHTRAG_GUARD_TRUSTED_PROXIES", "127.0.0.1,::1"
+    )
+    args.guard_trusted_proxy_depth = get_env_value(
+        "LIGHTRAG_GUARD_TRUSTED_PROXY_DEPTH", 1, int
+    )
+    args.guard_whitelist = get_env_value("LIGHTRAG_GUARD_WHITELIST", "")
+    args.guard_blacklist = get_env_value("LIGHTRAG_GUARD_BLACKLIST", "")
+    args.guard_penetration_detection = get_env_value(
+        "LIGHTRAG_GUARD_PENETRATION_DETECTION", True, bool
+    )
+    args.guard_scan_body = get_env_value("LIGHTRAG_GUARD_SCAN_BODY", False, bool)
+    args.guard_passive_mode = get_env_value("LIGHTRAG_GUARD_PASSIVE_MODE", False, bool)
+    args.guard_exclude_paths = get_env_value(
+        "LIGHTRAG_GUARD_EXCLUDE_PATHS", DEFAULT_EXCLUDE_PATHS
     )
 
     # Rerank model configuration

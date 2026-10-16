@@ -1258,6 +1258,16 @@ For the full routing syntax, supported extensions, parser cache behavior, chunke
 
 Uploads and text inserts can be accepted while the processing loop is busy; the running loop is nudged to pick up the new pending work. Destructive jobs such as document clear/delete and the classification phase of `/documents/scan` still reject concurrent enqueues to protect storage consistency. Failed files can be reprocessed from the WebUI or by triggering `/documents/scan`.
 
+### Inbound Request Guard (Optional)
+
+The server ships only a `/login` brute-force limiter. For a server reachable from untrusted networks, an optional guard based on [fastapi-guard](https://github.com/Guard-Core/fastapi-guard) adds an HTTP-wide per-client-IP rate limit, IP allow/deny lists and attack-pattern screening of the path, query string and headers. It is off by default: with `LIGHTRAG_GUARD_ENABLED` unset nothing is imported and no middleware is added. Set `LIGHTRAG_GUARD_ENABLED=true` to turn it on; the package is installed with the `api` extra, and enabling the guard without it fails at startup with an explicit error. All settings are documented in `env.example` (`LIGHTRAG_GUARD_*`).
+
+- Trusted client IP: the client IP is the TCP peer unless the peer is listed in `LIGHTRAG_GUARD_TRUSTED_PROXIES` (loopback only by default), in which case `X-Forwarded-For` is honored. A spoofed `X-Forwarded-For` from any other peer is ignored. Behind a reverse proxy or load balancer, add its address, otherwise all clients share the proxy's rate-limit bucket.
+- Request bodies are not scanned by default, because documents, queries and prompts are free text. Set `LIGHTRAG_GUARD_SCAN_BODY=true` to also screen the first 256 KiB of each body.
+- Middleware order: the guard runs inside CORS, so its 403/429 responses carry CORS headers, and ahead of the body-limit and admission middleware. It is pure ASGI, so streaming responses (`/query/stream`, `/api/chat`) and large uploads are not buffered.
+- Relation to the `/login` limiter: they are independent. The guard throttles every request per client IP; the login limiter locks out failed logins per client IP and username. A `/login` request counts toward both.
+- Counters are per server process (in-memory). Under gunicorn with N workers the effective rate limit is N times `LIGHTRAG_GUARD_RATE_LIMIT`.
+
 ## API Endpoints
 
 All supported backends (`lollms`, `ollama`, `openai` / OpenAI-compatible, `azure_openai`, `bedrock`, and `gemini`) expose the same LightRAG REST API surface. When the API Server is running, visit:
