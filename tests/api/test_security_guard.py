@@ -197,6 +197,34 @@ class TestAttackScreening:
 
         assert resp.status_code == 400 or resp.status_code == 403
 
+    @pytest.mark.parametrize(
+        "referer",
+        [
+            "http://localhost:9621/webui/",
+            "http://127.0.0.1:9621/webui/",
+            "http://192.168.1.20:9621/webui/",
+        ],
+    )
+    def test_localhost_and_lan_referers_are_not_blocked(self, monkeypatch, referer):
+        client = TestClient(
+            _create_app(monkeypatch, ENABLED="true"), client=(_peer(), 50000)
+        )
+
+        resp = client.get("/auth-status", headers={"Referer": referer})
+
+        assert resp.status_code == 200
+
+    def test_attack_in_referer_is_still_blocked(self, monkeypatch):
+        client = TestClient(
+            _create_app(monkeypatch, ENABLED="true"), client=(_peer(), 50000)
+        )
+
+        resp = client.get(
+            "/auth-status", headers={"Referer": "<script>alert(1)</script>"}
+        )
+
+        assert resp.status_code == 400
+
     def test_excluded_path_skips_attack_screening(self, monkeypatch):
         client = TestClient(
             _create_app(monkeypatch, ENABLED="true", EXCLUDE_PATHS="/auth-status"),

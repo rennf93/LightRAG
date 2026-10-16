@@ -35,6 +35,7 @@ def build_guard_config(args: Any, api_prefix: str = "") -> Any:
     """
     try:
         from guard import SecurityConfig
+        from guard_core.handlers.suspatterns_handler import ALL_DETECTION_CATEGORIES
     except ImportError as exc:
         raise RuntimeError(
             "LIGHTRAG_GUARD_ENABLED=true requires the 'fastapi-guard' package. "
@@ -60,6 +61,8 @@ def build_guard_config(args: Any, api_prefix: str = "") -> Any:
         blacklist=_split(args.guard_blacklist),
         enable_penetration_detection=args.guard_penetration_detection,
         detection_scan_body=args.guard_scan_body,
+        # Browsers send the page address as Referer, and guard-core 4.4.0 flags localhost and LAN addresses in it as ssrf.
+        enabled_detection_categories=frozenset(ALL_DETECTION_CATEGORIES) - {"ssrf"},
         passive_mode=args.guard_passive_mode,
         exclude_paths=exclude,
         # CORS stays with the app's CORSMiddleware, which wraps the guard.
